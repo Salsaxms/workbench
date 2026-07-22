@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="工作台">
+<meta name="theme-color" content="#6366f1">
+<title>个人管理工作台</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+  --primary-dark: #4f46e5;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --bg: #f5f5f8;
+  --card: #ffffff;
+  --text: #1f2937;
+  --text-light: #6b7280;
+  --border: #e5e7eb;
+  --shadow: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  padding-bottom: 80px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-container { max-width: 600px; margin: 0 auto; padding: 16px; }
+
+/* 顶部标题 */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px 20px;
+}
+.app-header h1 { font-size: 22px; font-weight: 700; }
+.app-header .date { font-size: 13px; color: var(--text-light); }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 状态卡片网格 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.stat-card {
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.stat-card:active { transform: scale(0.97); }
+.stat-icon { font-size: 28px; margin-bottom: 6px; }
+.stat-value { font-size: 22px; font-weight: 700; }
+.stat-label { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+.stat-card.done { border: 2px solid var(--success); }
+.stat-card.done .stat-value { color: var(--success); }
+
+/* 按钮 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:active { background: var(--primary-dark); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-sm { padding: 6px 14px; font-size: 13px; width: auto; }
+
+/* 输入框 */
+.input, .textarea, .select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-family: inherit;
+  background: #fff;
+  margin-bottom: 10px;
+  transition: border-color 0.15s;
+}
+.input:focus, .textarea:focus, .select:focus { outline: none; border-color: var(--primary); }
+.textarea { resize: vertical; min-height: 60px; }
+
+.field-group { margin-bottom: 10px; }
+.field-label { font-size: 13px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; display: block; }
+
+/* 打卡记录 */
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.record-item:last-child { border-bottom: none; }
+.record-date { font-size: 13px; color: var(--text-light); }
+.record-info { font-size: 14px; font-weight: 500; }
+
+/* 进度条 */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.progress-fill {
+  height:100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+/* 任务项 */
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.task-status {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #fff;
+}
+.task-status.todo { border-color: var(--text-light); }
+.task-status.doing { border-color: var(--warning); background: var(--warning); }
+.task-status.done { border-color: var(--success); background: var(--success); }
+.task-content { flex: 1; }
+.task-title { font-size: 14px; font-weight: 500; }
+.task-meta { font-size: 12px; color: var(--text-light); }
+.task-delete { color: var(--danger); cursor: pointer; font-size: 18px; padding: 0 4px; }
+
+/* 标签 */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--primary-light);
+  color: #fff;
+}
+.tag-cat-frontend { background: #6366f1; }
+.tag-cat-backend { background: #10b981; }
+.tag-cat-algorithm { background: #f59e0b; }
+.tag-cat-other { background: #6b7280; }
+
+/* 书籍项 */
+.book-item {
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.book-title { font-size: 14px; font-weight: 600; }
+.book-author { font-size: 12px; color: var(--text-light); }
+.book-progress-text { font-size: 12px; color: var(--text-light); margin-top: 4px; display: flex; justify-content: space-between; }
+
+/* 页面切换 */
+.page { display: none; }
+.page.active { display: block; }
+
+/* 底部导航 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  z-index: 100;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 12px;
+  cursor: pointer;
+  color: var(--text-light);
+  font-size: 11px;
+  transition: color 0.15s;
+}
+.nav-item.active { color: var(--primary); }
+.nav-icon { font-size: 22px; }
+
+/* 热力图 */
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+}
+.heat-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: #e5e7eb;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+}
+.heat-cell.l1 { background: #c7d2fe; }
+.heat-cell.l2 { background: #a5b4fc; }
+.heat-cell.l3 { background: #818cf8; }
+.heat-cell.l4 { background: #6366f1; color: #fff; }
+
+/* 模态框 */
+.modal-overlay {
+  position: fixed;
+  top:0; left:0; right:0; bottom:0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-size: 14px;
+  z-index: 300;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 30px 0;
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+/* 连续天数徽章 */
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 图表容器 */
+.chart-container { position: relative; height: 200px; margin-top: 10px; }
+
+/* 行布局 */
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1; }
+
+/* 设置区 */
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setting-row:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ===== 仪表盘首页 ===== -->
+  <div class="page active" id="page-dashboard">
+    <div class="app-header">
+      <div>
+        <h1>个人工作台</h1>
+        <div class="date" id="todayDate"></div>
+      </div>
+      <div id="overallStreak"></div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card" id="dash-exercise" onclick="switchPage('exercise')">
+        <div class="stat-icon">💪</div>
+        <div class="stat-value" id="dashExerciseValue">—</div>
+        <div class="stat-label">锻炼打卡</div>
+      </div>
+      <div class="stat-card" id="dash-diet" onclick="switchPage('diet')">
+        <div class="stat-icon">⚖️</div>
+        <div class="stat-value" id="dashDietValue">—</div>
+        <div class="stat-label">控食打卡</div>
+      </div>
+      <div class="stat-card" id="dash-coding" onclick="switchPage('coding')">
+        <div class="stat-icon">💻</div>
+        <div class="stat-value" id="dashCodingValue">—</div>
+        <div class="stat-label">编程学习</div>
+      </div>
+      <div class="stat-card" id="dash-reading" onclick="switchPage('reading')">
+        <div class="stat-icon">📚</div>
+        <div class="stat-value" id="dashReadingValue">—</div>
+        <div class="stat-label">阅读打卡</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 本周打卡热力图</div>
+      <div class="heatmap" id="weekHeatmap"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⚡ 快捷打卡</div>
+      <div class="row">
+        <button class="btn btn-success btn-sm" onclick="quickCheckin('exercise')">锻炼</button>
+        <button class="btn btn-success btn-sm" onclick="quickCheckin('diet')">控食</button>
+        <button class="btn btn-success btn-sm" onclick="quickCheckin('coding')">学习</button>
+        <button class="btn btn-success btn-sm" onclick="quickCheckin('reading')">阅读</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📈 打卡趋势</div>
+      <div class="chart-container"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ===== 锻炼打卡页 ===== -->
+  <div class="page" id="page-exercise">
+    <div class="app-header">
+      <h1>💪 锻炼打卡</h1>
+      <div id="exerciseStreak"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">今日打卡</div>
+      <div class="field-group">
+        <label class="field-label">运动类型</label>
+        <select class="select" id="exType">
+          <option value="跑步">🏃 跑步</option>
+          <option value="力量训练">🏋️ 力量训练</option>
+          <option value="瑜伽">🧘 瑜伽</option>
+          <option value="骑行">🚴 骑行</option>
+          <option value="游泳">🏊 游泳</option>
+          <option value="散步">🚶 散步</option>
+          <option value="其他">📦 其他</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">运动时长（分钟）</label>
+        <input type="number" class="input" id="exDuration" placeholder="如 30" min="1">
+      </div>
+      <div class="field-group">
+        <label class="field-label">备注（可选）</label>
+        <textarea class="textarea" id="exNote" placeholder="今天感觉如何..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="addExercise()">打卡</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 本月统计</div>
+      <div class="chart-container"><canvas id="exerciseChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 打卡记录</div>
+      <div id="exerciseList"></div>
+    </div>
+  </div>
+
+  <!-- ===== 减重打卡页 ===== -->
+  <div class="page" id="page-diet">
+    <div class="app-header">
+      <h1>⚖️ 减重打卡</h1>
+    </div>
+
+    <div class="card">
+      <div class="card-title">今日记录</div>
+      <div class="field-group">
+        <label class="field-label">今日体重（kg）</label>
+        <input type="number" class="input" id="dietWeight" placeholder="如 65.5" step="0.1">
+      </div>
+      <div class="field-group">
+        <label class="field-label">饮食情况</label>
+        <select class="select" id="dietControlled">
+          <option value="true">✅ 控制了饮食</option>
+          <option value="false">❌ 没控制住</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">饮食备注（可选）</label>
+        <textarea class="textarea" id="dietNote" placeholder="今天吃了什么..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="addDiet()">打卡</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📉 体重趋势</div>
+      <div class="chart-container"><canvas id="weightChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 打卡记录</div>
+      <div id="dietList"></div>
+    </div>
+  </div>
+
+  <!-- ===== 编程学习页 ===== -->
+  <div class="page" id="page-coding">
+    <div class="app-header">
+      <h1>💻 编程学习</h1>
+      <button class="btn btn-primary btn-sm" onclick="showModal('codingModal')">+ 新建</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 学习任务</div>
+      <div id="codingTaskList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⏱️ 今日学习时长</div>
+      <div class="field-group">
+        <label class="field-label">学习时长（分钟）</label>
+        <input type="number" class="input" id="codingMinutes" placeholder="如 60" min="1">
+      </div>
+      <button class="btn btn-success" onclick="addCodingTime()">记录今日学习</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 本周学习时长</div>
+      <div class="chart-container"><canvas id="codingChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 学习记录</div>
+      <div id="codingList"></div>
+    </div>
+  </div>
+
+  <!-- ===== 阅读打卡页 ===== -->
+  <div class="page" id="page-reading">
+    <div class="app-header">
+      <h1>📚 阅读打卡</h1>
+      <button class="btn btn-primary btn-sm" onclick="showModal('bookModal')">+ 添加</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📖 我的书架</div>
+      <div id="bookList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">✅ 今日阅读打卡</div>
+      <div class="field-group">
+        <label class="field-label">选择书籍</label>
+        <select class="select" id="readBookSelect"></select>
+      </div>
+      <div class="row">
+        <div class="field-group">
+          <label class="field-label">今日页数</label>
+          <input type="number" class="input" id="readPages" placeholder="如 20" min="1">
+        </div>
+        <div class="field-group">
+          <label class="field-label">阅读时长（分钟）</label>
+          <input type="number" class="input" id="readMinutes" placeholder="如 30" min="1">
+        </div>
+      </div>
+      <button class="btn btn-success" onclick="addReading()">打卡</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 本周阅读统计</div>
+      <div class="chart-container"><canvas id="readingChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 阅读记录</div>
+      <div id="readingList"></div>
+    </div>
+  </div>
+
+  <!-- ===== 设置页 ===== -->
+  <div class="page" id="page-settings">
+    <div class="app-header"><h1>⚙️ 设置</h1></div>
+
+    <div class="card">
+      <div class="card-title">💾 数据管理</div>
+      <div class="setting-row">
+        <span>导出数据备份</span>
+        <button class="btn btn-outline btn-sm" onclick="exportData()">导出</button>
+      </div>
+      <div class="setting-row">
+        <span>导入数据</span>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">导入</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+      <div class="setting-row">
+        <span style="color:var(--danger)">清空所有数据</span>
+        <button class="btn btn-danger btn-sm" onclick="clearAllData()">清空</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📱 添加到主屏幕</div>
+      <p style="font-size:13px;color:var(--text-light);line-height:1.8">
+        <b>iOS Safari：</b>点击底部分享按钮 →「添加到主屏幕」<br>
+        <b>Android Chrome：</b>点击右上角菜单 →「添加到主屏幕」<br>
+        即可像 App 一样从桌面直接打开。
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">ℹ️ 关于</div>
+      <p style="font-size:13px;color:var(--text-light)">
+        个人管理工作台 v1.0<br>数据保存在本地浏览器，不会上传服务器。
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== 底部导航 ===== -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="switchPage('dashboard')"><span class="nav-icon">🏠</span>首页</div>
+  <div class="nav-item" onclick="switchPage('exercise')"><span class="nav-icon">💪</span>锻炼</div>
+  <div class="nav-item" onclick="switchPage('diet')"><span class="nav-icon">⚖️</span>减重</div>
+  <div class="nav-item" onclick="switchPage('coding')"><span class="nav-icon">💻</span>学习</div>
+  <div class="nav-item" onclick="switchPage('reading')"><span class="nav-icon">📚</span>阅读</div>
+  <div class="nav-item" onclick="switchPage('settings')"><span class="nav-icon">⚙️</span>设置</div>
+</nav>
+
+<!-- ===== 模态框 ===== -->
+<div class="modal-overlay" id="codingModal">
+  <div class="modal">
+    <div class="modal-title">新建学习任务</div>
+    <div class="field-group">
+      <label class="field-label">任务标题</label>
+      <input type="text" class="input" id="taskTitle" placeholder="如：学习 React Hooks">
+    </div>
+    <div class="field-group">
+      <label class="field-label">技能分类</label>
+      <select class="select" id="taskCategory">
+        <option value="frontend">前端</option>
+        <option value="backend">后端</option>
+        <option value="algorithm">算法</option>
+        <option value="other">其他</option>
+      </select>
+    </div>
+    <div class="row">
+      <button class="btn btn-outline" onclick="hideModal('codingModal')">取消</button>
+      <button class="btn btn-primary" onclick="addTask()">创建</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="bookModal">
+  <div class="modal">
+    <div class="modal-title">添加书籍</div>
+    <div class="field-group">
+      <label class="field-label">书名</label>
+      <input type="text" class="input" id="bookTitle" placeholder="如：深入理解计算机系统">
+    </div>
+    <div class="field-group">
+      <label class="field-label">作者（可选）</label>
+      <input type="text" class="input" id="bookAuthor" placeholder="如：Randal E. Bryant">
+    </div>
+    <div class="field-group">
+      <label class="field-label">总页数</label>
+      <input type="number" class="input" id="bookTotalPages" placeholder="如 500" min="1">
+    </div>
+    <div class="field-group">
+      <label class="field-label">已读页数</label>
+      <input type="number" class="input" id="bookCurrentPage" placeholder="如 0" min="0" value="0">
+    </div>
+    <div class="row">
+      <button class="btn btn-outline" onclick="hideModal('bookModal')">取消</button>
+      <button class="btn btn-primary" onclick="addBook()">添加</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ 数据层 ============
+const DB_KEY = 'workbench_data';
+let db = loadData();
+
+function defaultData() {
+  return {
+    exercise: { records: [] },
+    diet: { records: [] },
+    coding: { tasks: [], records: [] },
+    reading: { books: [], records: [] }
+  };
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(DB_KEY);
+    if (!raw) return defaultData();
+    const d = JSON.parse(raw);
+    return { ...defaultData(), ...d };
+  } catch { return defaultData(); }
+}
+
+function saveData() {
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function dateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getRecentDates(days) {
+  const arr = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    arr.push(dateStr(d));
+  }
+  return arr;
+}
+
+function calcStreak(records, dateField = 'date') {
+  if (!records.length) return 0;
+  const dates = new Set(records.map(r => r[dateField]));
+  let streak = 0;
+  const d = new Date();
+  // 如果今天没打卡，从昨天开始算
+  if (!dates.has(dateStr(d))) d.setDate(d.getDate() - 1);
+  while (dates.has(dateStr(d))) {
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+// ============ 页面切换 ============
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  // 首页不在底部导航高亮
+  const navMap = { dashboard:0, exercise:1, diet:2, coding:3, reading:4, settings:5 };
+  if (navMap[name] !== undefined) {
+    document.querySelectorAll('.nav-item')[navMap[name]].classList.add('active');
+  }
+  window.scrollTo(0, 0);
+  // 渲染对应页面
+  renderPage(name);
+}
+
+function renderPage(name) {
+  switch(name) {
+    case 'dashboard': renderDashboard(); break;
+    case 'exercise': renderExercise(); break;
+    case 'diet': renderDiet(); break;
+    case 'coding': renderCoding(); break;
+    case 'reading': renderReading(); break;
+  }
+}
+
+// ============ Toast ============
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ============ 模态框 ============
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ============ 锻炼 ============
+function addExercise() {
+  const type = document.getElementById('exType').value;
+  const duration = parseInt(document.getElementById('exDuration').value);
+  const note = document.getElementById('exNote').value.trim();
+  if (!duration || duration <= 0) { toast('请输入运动时长'); return; }
+
+  const today = todayStr();
+  const records = db.exercise.records;
+  const idx = records.findIndex(r => r.date === today);
+  const record = { date: today, type, duration, note, ts: Date.now() };
+  if (idx >= 0) records[idx] = record; else records.push(record);
+  saveData();
+  document.getElementById('exDuration').value = '';
+  document.getElementById('exNote').value = '';
+  toast('锻炼打卡成功！');
+  renderExercise();
+}
+
+function quickCheckin(type) {
+  const today = todayStr();
+  if (type === 'exercise') {
+    if (db.exercise.records.find(r => r.date === today)) { toast('今天已锻炼打卡'); return; }
+    db.exercise.records.push({ date: today, type: '快速打卡', duration: 30, note: '', ts: Date.now() });
+    saveData(); toast('锻炼打卡成功！'); renderDashboard();
+  } else if (type === 'diet') {
+    if (db.diet.records.find(r => r.date === today)) { toast('今天已控食打卡'); return; }
+    db.diet.records.push({ date: today, weight: null, controlled: true, note: '快速打卡', ts: Date.now() });
+    saveData(); toast('控食打卡成功！'); renderDashboard();
+  } else if (type === 'coding') {
+    switchPage('coding');
+  } else if (type === 'reading') {
+    switchPage('reading');
+  }
+}
+
+function renderExercise() {
+  const records = db.exercise.records.sort((a,b) => b.date.localeCompare(a.date));
+  const today = todayStr();
+  const todayRec = records.find(r => r.date === today);
+
+  document.getElementById('dashExerciseValue').textContent = todayRec ? '✓' : '—';
+  document.getElementById('dash-exercise').classList.toggle('done', !!todayRec);
+
+  const streak = calcStreak(records);
+  document.getElementById('exerciseStreak').innerHTML = streak > 0 ? `<span class="streak-badge">🔥 ${streak}天</span>` : '';
+  document.getElementById('overallStreak').innerHTML = streak > 0 ? `<span class="streak-badge">🔥 ${streak}天</span>` : '';
+
+  const list = document.getElementById('exerciseList');
+  if (!records.length) {
+    list.innerHTML = '<div class="empty-state">还没有打卡记录，开始第一次打卡吧！</div>';
+  } else {
+    list.innerHTML = records.slice(0, 20).map(r =>
+      `<div class="record-item">
+        <div>
+          <div class="record-info">${r.type} · ${r.duration}分钟</div>
+          <div class="record-date">${r.date}${r.note ? ' · ' + r.note : ''}</div>
+        </div>
+      </div>`
+    ).join('');
+  }
+  renderExerciseChart();
+}
+
+function renderExerciseChart() {
+  const ctx = document.getElementById('exerciseChart').getContext('2d');
+  const dates = getRecentDates(7);
+  const data = dates.map(d => {
+    const r = db.exercise.records.find(x => x.date === d);
+    return r ? r.duration : 0;
+  });
+  if (window._exerciseChart) window._exerciseChart.destroy();
+  window._exerciseChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dates.map(d => d.slice(5)),
+      datasets: [{ label: '运动时长(分钟)', data, backgroundColor: '#6366f1', borderRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } } }
+  });
+}
+
+// ============ 减重 ============
+function addDiet() {
+  const weight = parseFloat(document.getElementById('dietWeight').value);
+  const controlled = document.getElementById('dietControlled').value === 'true';
+  const note = document.getElementById('dietNote').value.trim();
+
+  const today = todayStr();
+  const records = db.diet.records;
+  const idx = records.findIndex(r => r.date === today);
+  const record = { date: today, weight: weight || null, controlled, note, ts: Date.now() };
+  if (idx >= 0) records[idx] = record; else records.push(record);
+  saveData();
+  document.getElementById('dietWeight').value = '';
+  document.getElementById('dietNote').value = '';
+  toast('控食打卡成功！');
+  renderDiet();
+}
+
+function renderDiet() {
+  const records = db.diet.records.sort((a,b) => b.date.localeCompare(a.date));
+  const today = todayStr();
+  const todayRec = records.find(r => r.date === today);
+
+  document.getElementById('dashDietValue').textContent = todayRec ? (todayRec.controlled ? '✓' : '✗') : '—';
+  document.getElementById('dash-diet').classList.toggle('done', !!todayRec && todayRec.controlled);
+
+  const list = document.getElementById('dietList');
+  if (!records.length) {
+    list.innerHTML = '<div class="empty-state">还没有打卡记录</div>';
+  } else {
+    list.innerHTML = records.slice(0, 20).map(r =>
+      `<div class="record-item">
+        <div>
+          <div class="record-info">${r.controlled ? '✅ 控制了' : '❌ 没控制'}${r.weight ? ' · ' + r.weight + 'kg' : ''}</div>
+          <div class="record-date">${r.date}${r.note ? ' · ' + r.note : ''}</div>
+        </div>
+      </div>`
+    ).join('');
+  }
+  renderWeightChart();
+}
+
+function renderWeightChart() {
+  const ctx = document.getElementById('weightChart').getContext('2d');
+  const records = db.diet.records.filter(r => r.weight).sort((a,b) => a.date.localeCompare(b.date));
+  const recent = records.slice(-14);
+  if (window._weightChart) window._weightChart.destroy();
+  if (!recent.length) {
+    ctx.canvas.parentElement.innerHTML = '<div class="empty-state">暂无体重数据</div>';
+    return;
+  }
+  window._weightChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: recent.map(r => r.date.slice(5)),
+      datasets: [{ label: '体重(kg)', data: recent.map(r => r.weight), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3, pointRadius: 4 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+}
+
+// ============ 编程学习 ============
+function addTask() {
+  const title = document.getElementById('taskTitle').value.trim();
+  const category = document.getElementById('taskCategory').value;
+  if (!title) { toast('请输入任务标题'); return; }
+  db.coding.tasks.push({ id: Date.now(), title, category, status: 'todo', createdAt: Date.now() });
+  saveData();
+  document.getElementById('taskTitle').value = '';
+  hideModal('codingModal');
+  toast('任务已创建');
+  renderCoding();
+}
+
+function cycleTaskStatus(id) {
+  const task = db.coding.tasks.find(t => t.id === id);
+  if (!task) return;
+  const order = ['todo', 'doing', 'done'];
+  task.status = order[(order.indexOf(task.status) + 1) % 3];
+  saveData();
+  renderCoding();
+}
+
+function deleteTask(id) {
+  if (!confirm('确认删除此任务？')) return;
+  db.coding.tasks = db.coding.tasks.filter(t => t.id !== id);
+  saveData();
+  renderCoding();
+}
+
+function addCodingTime() {
+  const minutes = parseInt(document.getElementById('codingMinutes').value);
+  if (!minutes || minutes <= 0) { toast('请输入学习时长'); return; }
+  const today = todayStr();
+  const records = db.coding.records;
+  const idx = records.findIndex(r => r.date === today);
+  if (idx >= 0) records[idx].minutes += minutes; else records.push({ date: today, minutes, ts: Date.now() });
+  saveData();
+  document.getElementById('codingMinutes').value = '';
+  toast('学习时长已记录');
+  renderCoding();
+}
+
+function renderCoding() {
+  const today = todayStr();
+  const todayRec = db.coding.records.find(r => r.date === today);
+  document.getElementById('dashCodingValue').textContent = todayRec ? todayRec.minutes + '分' : '—';
+  document.getElementById('dash-coding').classList.toggle('done', !!todayRec);
+
+  const catLabels = { frontend: '前端', backend: '后端', algorithm: '算法', other: '其他' };
+  const statusLabels = { todo: '待开始', doing: '进行中', done: '已完成' };
+
+  const taskList = document.getElementById('codingTaskList');
+  if (!db.coding.tasks.length) {
+    taskList.innerHTML = '<div class="empty-state">还没有学习任务，点击右上角创建</div>';
+  } else {
+    taskList.innerHTML = db.coding.tasks.map(t =>
+      `<div class="task-item">
+        <div class="task-status ${t.status}" onclick="cycleTaskStatus(${t.id})">${t.status === 'done' ? '✓' : t.status === 'doing' ? '⋯' : ''}</div>
+        <div class="task-content">
+          <div class="task-title">${t.title}</div>
+          <div class="task-meta"><span class="tag tag-cat-${t.category}">${catLabels[t.category]}</span> · ${statusLabels[t.status]}</div>
+        </div>
+        <div class="task-delete" onclick="deleteTask(${t.id})">×</div>
+      </div>`
+    ).join('');
+  }
+
+  const records = db.coding.records.sort((a,b) => b.date.localeCompare(a.date));
+  const list = document.getElementById('codingList');
+  if (!records.length) {
+    list.innerHTML = '<div class="empty-state">还没有学习记录</div>';
+  } else {
+    list.innerHTML = records.slice(0, 20).map(r =>
+      `<div class="record-item">
+        <div>
+          <div class="record-info">学习 ${r.minutes} 分钟</div>
+          <div class="record-date">${r.date}</div>
+        </div>
+      </div>`
+    ).join('');
+  }
+  renderCodingChart();
+}
+
+function renderCodingChart() {
+  const ctx = document.getElementById('codingChart').getContext('2d');
+  const dates = getRecentDates(7);
+  const data = dates.map(d => {
+    const r = db.coding.records.find(x => x.date === d);
+    return r ? r.minutes : 0;
+  });
+  if (window._codingChart) window._codingChart.destroy();
+  window._codingChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dates.map(d => d.slice(5)),
+      datasets: [{ label: '学习时长(分钟)', data, backgroundColor: '#10b981', borderRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+}
+
+// ============ 阅读 ============
+function addBook() {
+  const title = document.getElementById('bookTitle').value.trim();
+  const author = document.getElementById('bookAuthor').value.trim();
+  const totalPages = parseInt(document.getElementById('bookTotalPages').value);
+  const currentPage = parseInt(document.getElementById('bookCurrentPage').value) || 0;
+  if (!title) { toast('请输入书名'); return; }
+  if (!totalPages || totalPages <= 0) { toast('请输入总页数'); return; }
+  db.reading.books.push({ id: Date.now(), title, author, totalPages, currentPage, createdAt: Date.now() });
+  saveData();
+  document.getElementById('bookTitle').value = '';
+  document.getElementById('bookAuthor').value = '';
+  document.getElementById('bookTotalPages').value = '';
+  document.getElementById('bookCurrentPage').value = '0';
+  hideModal('bookModal');
+  toast('书籍已添加');
+  renderReading();
+}
+
+function addReading() {
+  const bookId = parseInt(document.getElementById('readBookSelect').value);
+  const pages = parseInt(document.getElementById('readPages').value);
+  const minutes = parseInt(document.getElementById('readMinutes').value);
+  if (!bookId) { toast('请选择书籍'); return; }
+  if (!pages && !minutes) { toast('请输入页数或时长'); return; }
+
+  const today = todayStr();
+  const records = db.reading.records;
+  const idx = records.findIndex(r => r.date === today && r.bookId === bookId);
+  const record = { date: today, bookId, pages: pages || 0, minutes: minutes || 0, ts: Date.now() };
+  if (idx >= 0) { records[idx].pages += pages || 0; records[idx].minutes += minutes || 0; }
+  else records.push(record);
+
+  const book = db.reading.books.find(b => b.id === bookId);
+  if (book && pages) book.currentPage = Math.min(book.totalPages, book.currentPage + pages);
+
+  saveData();
+  document.getElementById('readPages').value = '';
+  document.getElementById('readMinutes').value = '';
+  toast('阅读打卡成功！');
+  renderReading();
+}
+
+function deleteBook(id) {
+  if (!confirm('确认删除此书籍及相关记录？')) return;
+  db.reading.books = db.reading.books.filter(b => b.id !== id);
+  db.reading.records = db.reading.records.filter(r => r.bookId !== id);
+  saveData();
+  renderReading();
+}
+
+function renderReading() {
+  const today = todayStr();
+  const todayRec = db.reading.records.find(r => r.date === today);
+  document.getElementById('dashReadingValue').textContent = todayRec ? '✓' : '—';
+  document.getElementById('dash-reading').classList.toggle('done', !!todayRec);
+
+  // 书籍选择
+  const select = document.getElementById('readBookSelect');
+  if (db.reading.books.length === 0) {
+    select.innerHTML = '<option value="">请先添加书籍</option>';
+  } else {
+    select.innerHTML = db.reading.books.map(b => `<option value="${b.id}">${b.title}</option>`).join('');
+  }
+
+  const bookList = document.getElementById('bookList');
+  if (!db.reading.books.length) {
+    bookList.innerHTML = '<div class="empty-state">还没有书籍，点击右上角添加</div>';
+  } else {
+    bookList.innerHTML = db.reading.books.map(b => {
+      const pct = Math.round(b.currentPage / b.totalPages * 100);
+      return `<div class="book-item">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div>
+            <div class="book-title">${b.title}</div>
+            <div class="book-author">${b.author || '未知作者'}</div>
+          </div>
+          <span class="task-delete" onclick="deleteBook(${b.id})">×</span>
+        </div>
+        <div class="book-progress-text"><span>${b.currentPage}/${b.totalPages}页</span><span>${pct}%</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  const records = db.reading.records.sort((a,b) => b.date.localeCompare(a.date));
+  const list = document.getElementById('readingList');
+  if (!records.length) {
+    list.innerHTML = '<div class="empty-state">还没有阅读记录</div>';
+  } else {
+    list.innerHTML = records.slice(0, 20).map(r => {
+      const book = db.reading.books.find(b => b.id === r.bookId);
+      return `<div class="record-item">
+        <div>
+          <div class="record-info">${book ? book.title : '未知'} · ${r.pages}页 · ${r.minutes}分钟</div>
+          <div class="record-date">${r.date}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  renderReadingChart();
+}
+
+function renderReadingChart() {
+  const ctx = document.getElementById('readingChart').getContext('2d');
+  const dates = getRecentDates(7);
+  const data = dates.map(d => {
+    const rs = db.reading.records.filter(r => r.date === d);
+    return rs.reduce((sum, r) => sum + r.minutes, 0);
+  });
+  if (window._readingChart) window._readingChart.destroy();
+  window._readingChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dates.map(d => d.slice(5)),
+      datasets: [{ label: '阅读时长(分钟)', data, backgroundColor: '#f59e0b', borderRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+}
+
+// ============ 仪表盘 ============
+function renderDashboard() {
+  const today = todayStr();
+  // 更新状态卡片
+  const exRec = db.exercise.records.find(r => r.date === today);
+  const dietRec = db.diet.records.find(r => r.date === today);
+  const codingRec = db.coding.records.find(r => r.date === today);
+  const readingRec = db.reading.records.find(r => r.date === today);
+
+  document.getElementById('dashExerciseValue').textContent = exRec ? '✓' : '—';
+  document.getElementById('dash-exercise').classList.toggle('done', !!exRec);
+  document.getElementById('dashDietValue').textContent = dietRec ? (dietRec.controlled ? '✓' : '✗') : '—';
+  document.getElementById('dash-diet').classList.toggle('done', !!dietRec && dietRec.controlled);
+  document.getElementById('dashCodingValue').textContent = codingRec ? codingRec.minutes + '分' : '—';
+  document.getElementById('dash-coding').classList.toggle('done', !!codingRec);
+  document.getElementById('dashReadingValue').textContent = readingRec ? '✓' : '—';
+  document.getElementById('dash-reading').classList.toggle('done', !!readingRec);
+
+  // 连续天数
+  const exStreak = calcStreak(db.exercise.records);
+  document.getElementById('overallStreak').innerHTML = exStreak > 0 ? `<span class="streak-badge">🔥 ${exStreak}天</span>` : '';
+
+  renderHeatmap();
+  renderTrendChart();
+}
+
+function renderHeatmap() {
+  const dates = getRecentDates(7);
+  const container = dayLabels = ['日','一','二','三','四','五','六'];
+  const html = dates.map(d => {
+    const dow = new Date(d).getDay();
+    let count = 0;
+    if (db.exercise.records.find(r => r.date === d)) count++;
+    if (db.diet.records.find(r => r.date === d && r.controlled)) count++;
+    if (db.coding.records.find(r => r.date === d)) count++;
+    if (db.reading.records.find(r => r.date === d)) count++;
+    const level = count === 0 ? '' : count <= 1 ? 'l1' : count <= 2 ? 'l2' : count <= 3 ? 'l3' : 'l4';
+    return `<div class="heat-cell ${level}" title="${d}: ${count}项">${container}</div>`;
+  }).join('');
+  document.getElementById('weekHeatmap').innerHTML = dates.map(d => {
+    const dow = new Date(d).getDay();
+    let count = 0;
+    if (db.exercise.records.find(r => r.date === d)) count++;
+    if (db.diet.records.find(r => r.date === d && r.controlled)) count++;
+    if (db.coding.records.find(r => r.date === d)) count++;
+    if (db.reading.records.find(r => r.date === d)) count++;
+    const level = count === 0 ? '' : count <= 1 ? 'l1' : count <= 2 ? 'l2' : count <= 3 ? 'l3' : 'l4';
+    const label = ['日','一','二','三','四','五','六'][dow];
+    return `<div class="heat-cell ${level}" title="${d}: ${count}项打卡">${label}</div>`;
+  }).join('');
+}
+
+function renderTrendChart() {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  const dates = getRecentDates(7);
+  const exData = dates.map(d => db.exercise.records.find(r => r.date === d) ? 1 : 0);
+  const dietData = dates.map(d => db.diet.records.find(r => r.date === d && r.controlled) ? 1 : 0);
+  const codingData = dates.map(d => db.coding.records.find(r => r.date === d) ? 1 : 0);
+  const readingData = dates.map(d => db.reading.records.find(r => r.date === d) ? 1 : 0);
+
+  if (window._trendChart) window._trendChart.destroy();
+  window._trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates.map(d => d.slice(5)),
+      datasets: [
+        { label: '锻炼', data: exData, borderColor: '#6366f1', tension: 0.3 },
+        { label: '控食', data: dietData, borderColor: '#10b981', tension: 0.3 },
+        { label: '学习', data: codingData, borderColor: '#f59e0b', tension: 0.3 },
+        { label: '阅读', data: readingData, borderColor: '#ef4444', tension: 0.3 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } },
+      scales: { y: { beginAtZero: true, max: 1.2, ticks: { stepSize: 1, callback: v => v === 1 ? '✓' : '' } } } }
+  });
+}
+
+// ============ 数据管理 ============
+function exportData() {
+  const data = JSON.stringify(db, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `workbench-backup-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('数据已导出');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.exercise || !data.diet) throw new Error('格式不对');
+      db = { ...defaultData(), ...data };
+      saveData();
+      toast('数据导入成功');
+      renderDashboard();
+    } catch { toast('导入失败：文件格式不对'); }
+  };
+  reader.readAsText(file);
+}
+
+function clearAllData() {
+  if (!confirm('确认清空所有数据？此操作不可撤销！')) return;
+  db = defaultData();
+  saveData();
+  toast('所有数据已清空');
+  renderDashboard();
+}
+
+// ============ 初始化 ============
+function init() {
+  const d = new Date();
+  const weekDays = ['日','一','二','三','四','五','六'];
+  document.getElementById('todayDate').textContent = `${d.getMonth()+1}月${d.getDate()}日 星期${weekDays[d.getDay()]}`;
+  renderDashboard();
+}
+
+// Service Worker 注册（PWA离线支持）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const swCode = `
+      const CACHE = 'workbench-v1';
+      self.addEventListener('install', e => { self.skipWaiting(); });
+      self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
+      self.addEventListener('fetch', e => {
+        e.respondWith(
+          caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+            if (res && res.status === 200 && e.request.method === 'GET') {
+              const clone = res.clone();
+              caches.open(CACHE).then(c => c.put(e.request, clone));
+            }
+            return res;
+          }).catch(() => caches.match(e.request)))
+        );
+      });
+    `;
+    const blob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch(() => {});
+  });
+}
+
+init();
+</script>
+</body>
+</html>
